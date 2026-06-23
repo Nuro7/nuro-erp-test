@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 40 33% 97%;
+  --foreground: 220 31% 13%;
+  --card: 0 0% 100%;
+  --muted: 210 25% 94%;
+  --border: 214 30% 88%;
+  --primary: 16 87% 53%;
+  --accent: 201 95% 42%;
+  --success: 146 67% 40%;
+  --warning: 39 97% 50%;
+  --destructive: 0 84% 60%;
+
+  --module-dashboard: 217 91% 60%;
+  --module-projects: 258 90% 66%;
+  --module-tasks: 38 92% 50%;
+  --module-clients: 187 94% 43%;
+  --module-hr: 330 81% 60%;
+  --module-attendance: 168 76% 42%;
+  --module-leave: 271 91% 65%;
+  --module-time: 239 84% 67%;
+  --module-accounts: 142 71% 45%;
+  --module-invoices: 160 84% 39%;
+  --module-proposals: 199 89% 48%;
+  --module-reports: 350 89% 60%;
+  --module-settings: 25 5% 45%;
+}
+
+.dark {
+  --background: 222 39% 8%;
+  --foreground: 210 40% 98%;
+  --card: 224 34% 12%;
+  --muted: 224 26% 18%;
+  --border: 217 23% 24%;
+  --primary: 16 87% 58%;
+  --accent: 201 95% 52%;
+  --success: 146 67% 46%;
+  --warning: 39 97% 56%;
+  --destructive: 0 84% 65%;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(255, 146, 43, 0.18), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.12), transparent 25%),
+    hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: "Aptos", "Avenir Next", "Segoe UI Variable", "Helvetica Neue", sans-serif;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+code,
+pre,
+.font-mono {
+  font-family: "IBM Plex Mono", "SFMono-Regular", "Cascadia Code", monospace;
+}

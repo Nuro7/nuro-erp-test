@@ -1,0 +1,16 @@
+# Netlify deploys the Next.js web app from this npm-workspaces monorepo.
+# The install step runs at the repo root (so workspaces like @nuro7/contracts
+# resolve), then we build only the @nuro7/web workspace and publish its
+# .next output. The API stays on Render.
+[build]
+  command = "npm run build --workspace @nuro7/web"
+  publish = "apps/web/.next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+# Official Next.js runtime plugin — handles SSR, dynamic routes like
+# /portal/projects/[id], and image optimization on Netlify Functions.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

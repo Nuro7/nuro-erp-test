@@ -1,0 +1,75 @@
+# Render Blueprint — Deploy the NestJS API as a free web service.
+# Apply at: https://dashboard.render.com/blueprints
+#
+# After applying, set the env vars marked `sync: false` in the Render dashboard:
+#   DATABASE_URL, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET,
+#   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_ENDPOINT,
+#   AWS_S3_PUBLIC_URL, SMTP_PASS, CORS_ORIGIN, APP_URL.
+
+services:
+  - type: web
+    name: nuro-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    plan: free
+    # Singapore is the closest free region for India users (~60-100ms latency)
+    region: singapore
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "1"
+      - key: JWT_ACCESS_TTL
+        value: 365d
+      - key: JWT_REFRESH_TTL
+        value: 365d
+      - key: FILE_STORAGE_DRIVER
+        value: s3
+      - key: AWS_REGION
+        value: ap-south-1
+      - key: AWS_S3_BUCKET
+        value: nuro-uploads
+      - key: SMTP_HOST
+        value: smtp.resend.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        value: resend
+      # Client portal feature flag. Must be "true" for /api/v1/client-portal/*
+      # routes to respond — otherwise main.ts short-circuits with 404 and the
+      # SPA shows "request_failed_404" on every fetch. Pair with
+      # NEXT_PUBLIC_PORTAL_ENABLED=true on Vercel.
+      - key: PORTAL_ENABLED
+        value: "true"
+      # ===== These you must fill in Render dashboard =====
+      # PORTAL_URL = public Vercel URL (e.g. https://nuro7.com). Used by the
+      # magic-link verify endpoint to redirect back to the portal, and to
+      # decide cookie Secure/SameSite=None flags. Defaults to localhost if
+      # unset — magic links would land on your laptop.
+      - key: PORTAL_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_S3_ENDPOINT
+        sync: false
+      - key: AWS_S3_PUBLIC_URL
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: API_URL
+        sync: false
