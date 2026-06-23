@@ -223,7 +223,7 @@ async function main() {
     },
   });
 
-  await prisma.user.create({
+  const demoUser = await prisma.user.create({
     data: {
       email: "demo",
       passwordHash: demoPasswordHash,
@@ -238,7 +238,7 @@ async function main() {
         create: {
           department: "Operations",
           designation: "Demo Admin",
-          salary: 0,
+          salary: 120000,
           joinDate: new Date("2024-01-01"),
           employmentType: EmploymentType.FULL_TIME,
           performanceScore: 5,
@@ -400,6 +400,11 @@ async function main() {
             roleLabel: "AI Engineer",
             allocation: 80,
           },
+          {
+            userId: demoUser.id,
+            roleLabel: "Demo Admin",
+            allocation: 50,
+          },
         ],
       },
       milestones: {
@@ -439,6 +444,33 @@ async function main() {
       authorId: manager.id,
       content: "Keep the workflow event-driven so ops can extend it later.",
     },
+  });
+
+  // A couple of tasks assigned to the demo user so the "My Tasks" views and
+  // dashboard task board show data when signed in as demo.
+  await prisma.task.createMany({
+    data: [
+      {
+        projectId: project.id,
+        title: "Review demo deployment checklist",
+        description: "Walk through the hosted environment and confirm each module loads.",
+        assignedToId: demoUser.id,
+        status: TaskStatus.IN_PROGRESS,
+        priority: Priority.MEDIUM,
+        dueDate: new Date("2025-06-20"),
+        estimatedHrs: 6,
+      },
+      {
+        projectId: project.id,
+        title: "Prepare client onboarding deck",
+        description: "Draft slides summarizing project scope and timeline.",
+        assignedToId: demoUser.id,
+        status: TaskStatus.TODO,
+        priority: Priority.HIGH,
+        dueDate: new Date("2025-06-28"),
+        estimatedHrs: 4,
+      },
+    ],
   });
 
   await prisma.timeEntry.create({
@@ -611,6 +643,18 @@ async function main() {
         title: "Task updated",
         body: "Build AI triage workflow is due on May 12.",
         actionUrl: `/tasks?task=${task.id}`,
+      },
+      {
+        userId: demoUser.id,
+        title: "Welcome to Nuro7",
+        body: "You're signed in as the demo admin. Explore projects, finance, and HR.",
+        actionUrl: `/dashboard`,
+      },
+      {
+        userId: demoUser.id,
+        title: "New task assigned",
+        body: "Review demo deployment checklist is due on June 20.",
+        actionUrl: `/tasks`,
       },
     ],
   });
