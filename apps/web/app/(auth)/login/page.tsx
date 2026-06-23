@@ -110,10 +110,10 @@ export default function LoginPage() {
             action="/login"
           >
             <Input
-              type="email"
+              type="text"
               id="email"
               name="email"
-              placeholder="you@nuro7.com"
+              placeholder="Username (demo)"
               autoComplete="username"
               required
               value={email}

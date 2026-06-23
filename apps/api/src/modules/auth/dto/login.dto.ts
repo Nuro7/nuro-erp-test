@@ -1,11 +1,14 @@
-import { IsEmail, IsString, MinLength } from "class-validator";
+import { IsString, MinLength } from "class-validator";
 
 export class LoginDto {
-  @IsEmail()
+  // Demo mode: accept any identifier (username or email), not just a valid
+  // email, so credentials like "demo" work. Looked up against User.email.
+  @IsString()
+  @MinLength(1)
   email!: string;
 
   @IsString()
-  @MinLength(8)
+  @MinLength(1)
   password!: string;
 }
 

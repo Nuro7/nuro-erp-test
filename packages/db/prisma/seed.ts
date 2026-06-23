@@ -26,6 +26,9 @@ function hashPassword(password: string): string {
 }
 
 const passwordHash = hashPassword("ChangeMe123!");
+// Demo login — username "demo", password "demo" (see login page). Full
+// SUPER_ADMIN access so the whole app is browsable in the demo deployment.
+const demoPasswordHash = hashPassword("demo");
 
 const permissionSeeds = [
   ["users", PermissionAction.READ],
@@ -215,6 +218,30 @@ async function main() {
           joinDate: new Date("2024-01-01"),
           employmentType: EmploymentType.FULL_TIME,
           performanceScore: 4.8,
+        },
+      },
+    },
+  });
+
+  await prisma.user.create({
+    data: {
+      email: "demo",
+      passwordHash: demoPasswordHash,
+      firstName: "Demo",
+      lastName: "User",
+      status: UserStatus.ACTIVE,
+      emailVerifiedAt: new Date(),
+      roles: {
+        create: [{ roleId: superAdminRole.id }],
+      },
+      employeeProfile: {
+        create: {
+          department: "Operations",
+          designation: "Demo Admin",
+          salary: 0,
+          joinDate: new Date("2024-01-01"),
+          employmentType: EmploymentType.FULL_TIME,
+          performanceScore: 5,
         },
       },
     },
