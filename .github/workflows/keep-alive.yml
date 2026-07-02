@@ -1,0 +1,40 @@
+name: Keep API awake
+
+# Pings the Render API health endpoint on a schedule so the free-tier
+# service doesn't spin down (~50s cold start on the next request otherwise).
+# The demo login stays fast because the container is always warm.
+#
+# Setup (one time):
+#   GitHub repo → Settings → Secrets and variables → Actions → Variables tab
+#   → New repository variable
+#     Name:  KEEP_ALIVE_URL
+#     Value: https://<your-render-app>.onrender.com/api/v1/health
+#
+# You can also run it on demand from the Actions tab (workflow_dispatch).
+
+on:
+  schedule:
+    # Every 10 minutes. Render sleeps after ~15 min idle, so this keeps a
+    # comfortable margin even when GitHub delays scheduled runs.
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          URL="${{ vars.KEEP_ALIVE_URL }}"
+          if [ -z "$URL" ]; then
+            echo "::error::KEEP_ALIVE_URL repository variable is not set."
+            exit 1
+          fi
+          echo "Pinging $URL"
+          # --max-time 90 tolerates a cold start; a slow first response is
+          # exactly the wake-up we want, so don't fail the job on timeout.
+          if curl -fsS --max-time 90 "$URL"; then
+            echo "OK — API is awake."
+          else
+            echo "Ping did not return 200 (server may be waking up). Non-fatal."
+          fi
