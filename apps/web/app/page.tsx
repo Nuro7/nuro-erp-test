@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { loginRequest } from "@/lib/api/client";
@@ -19,6 +19,19 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const setSession = useAuthStore((state) => state.setSession);
+
+  // Pre-warm the API the moment the landing page loads. On Render's free tier
+  // the service sleeps after 15 min idle and takes ~50s to wake on the next
+  // request. Firing a health-check ping here means the cold start happens
+  // WHILE the visitor reads the page, so by the time they click "Launch Demo"
+  // the container is already awake and login returns in ~1s. Fire-and-forget:
+  // failures are ignored (the button's own request is the real gate).
+  useEffect(() => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+    fetch(`${apiUrl}/health`, { cache: "no-store" }).catch(() => {
+      /* server still waking — ignore, the launch click will retry */
+    });
+  }, []);
 
   async function launchDemo() {
     setError(null);
