@@ -1,46 +1,56 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ArrowRight, Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { loginRequest } from "@/lib/api/client";
 import { useAuthStore } from "@/lib/store/auth-store";
+import type { LoginResponse } from "@/lib/auth";
 
-// Demo landing page. Instead of showing a login form, we expose a single
-// "Launch Demo" button that signs in the seeded demo account (username
-// "demo" / password "demo", SUPER_ADMIN) behind the scenes and drops the
-// visitor straight into the dashboard. The backend still requires a JWT on
-// every route, so we can't just redirect to /dashboard — we auto-login to
-// get a real token, then navigate.
+// Demo landing page. A single "Launch Demo" button drops the visitor straight
+// into the dashboard — no login form, no credentials.
+//
+// When NEXT_PUBLIC_DEMO_MODE is "true" (paired with DEMO_MODE=true on the API)
+// there is NO authentication at all: the API runs every request as the seeded
+// demo account, so the button just seeds a local placeholder session and
+// navigates instantly — zero login round-trip, nothing to wait for. When the
+// flag is off it falls back to a real behind-the-scenes login with the seeded
+// demo credentials, so the same page still works against a secured API.
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 const DEMO_EMAIL = "demo";
 const DEMO_PASSWORD = "demo";
+
+// Placeholder session used in DEMO_MODE. The token is never verified — the API
+// bypasses auth entirely — so any non-empty value works; it only needs to be
+// truthy so the dashboard's SessionGuard lets the page render. SUPER_ADMIN so
+// any client-side role gating shows the full app.
+const DEMO_SESSION: LoginResponse = {
+  accessToken: "demo",
+  refreshToken: "demo",
+  user: { id: "demo", email: "demo", roles: ["SUPER_ADMIN"] },
+};
 
 export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const setSession = useAuthStore((state) => state.setSession);
 
-  // Pre-warm the API the moment the landing page loads. On Render's free tier
-  // the service sleeps after 15 min idle and takes ~50s to wake on the next
-  // request. Firing a health-check ping here means the cold start happens
-  // WHILE the visitor reads the page, so by the time they click "Launch Demo"
-  // the container is already awake and login returns in ~1s. Fire-and-forget:
-  // failures are ignored (the button's own request is the real gate).
-  useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
-    fetch(`${apiUrl}/health`, { cache: "no-store" }).catch(() => {
-      /* server still waking — ignore, the launch click will retry */
-    });
-  }, []);
-
   async function launchDemo() {
     setError(null);
     setLoading(true);
+
+    // No-auth demo path: seed the placeholder session and go straight in.
+    // Nothing blocks on the network, so entry is instant.
+    if (DEMO_MODE) {
+      setSession(DEMO_SESSION);
+      window.location.assign("/dashboard");
+      return;
+    }
+
+    // Fallback (secured API): real login with the seeded demo credentials.
     try {
       const session = await loginRequest(DEMO_EMAIL, DEMO_PASSWORD);
       setSession(session);
-      // Real top-level navigation so the persisted session is fully flushed
-      // to storage before the dashboard's SessionGuard reads it.
       window.location.assign("/dashboard");
     } catch {
       setError(
