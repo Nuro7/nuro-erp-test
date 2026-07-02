@@ -633,6 +633,272 @@ async function main() {
     ],
   });
 
+  // ─────────────────────────────────────────────────────────────────────
+  // Additional demo data — extra clients, projects, tasks, and finance
+  // records so every module (CRM, delivery, finance, HR) looks populated in
+  // the hosted demo rather than showing a single sample row.
+  // ─────────────────────────────────────────────────────────────────────
+  const clientNova = await prisma.client.create({
+    data: {
+      companyName: "Nova Retail Group",
+      contactPerson: "Rahul Menon",
+      email: "rahul@novaretail.example",
+      phone: "+91-9812345678",
+      address: "Mumbai, India",
+      website: "https://novaretail.example",
+      notes: "Omnichannel retail analytics engagement.",
+      contracts: {
+        create: {
+          title: "Retail Analytics Retainer",
+          startDate: new Date("2025-03-01"),
+          value: 480000,
+          status: "Active",
+        },
+      },
+    },
+  });
+
+  const clientFinserv = await prisma.client.create({
+    data: {
+      companyName: "Finserv Capital",
+      contactPerson: "Ayesha Khan",
+      email: "ayesha@finservcapital.example",
+      phone: "+91-9765432100",
+      address: "Gurugram, India",
+      website: "https://finservcapital.example",
+      notes: "Document automation and compliance copilots.",
+      contracts: {
+        create: {
+          title: "Compliance Automation SOW",
+          startDate: new Date("2025-04-15"),
+          value: 620000,
+          status: "Active",
+        },
+      },
+    },
+  });
+
+  const clientBright = await prisma.client.create({
+    data: {
+      companyName: "BrightLearn EdTech",
+      contactPerson: "Sofia D'Souza",
+      email: "sofia@brightlearn.example",
+      phone: "+91-9900011223",
+      address: "Pune, India",
+      website: "https://brightlearn.example",
+      notes: "Adaptive learning recommendation engine.",
+    },
+  });
+
+  const projectNova = await prisma.project.create({
+    data: {
+      name: "Retail Insights Platform",
+      clientId: clientNova.id,
+      description: "Unified sales, inventory, and customer analytics dashboards.",
+      startDate: new Date("2025-03-15"),
+      endDate: new Date("2025-10-30"),
+      budget: 400000,
+      status: ProjectStatus.ACTIVE,
+      managerId: manager.id,
+      members: {
+        create: [
+          { userId: manager.id, roleLabel: "Project Manager", allocation: 30 },
+          { userId: engineer.id, roleLabel: "Data Engineer", allocation: 60 },
+        ],
+      },
+      milestones: {
+        create: [
+          {
+            title: "Data ingestion pipeline",
+            description: "Connect POS and inventory sources.",
+            dueDate: new Date("2025-05-01"),
+            status: MilestoneStatus.DONE,
+          },
+          {
+            title: "Analytics dashboards",
+            description: "Sales, margin, and cohort views.",
+            dueDate: new Date("2025-08-01"),
+            status: MilestoneStatus.IN_PROGRESS,
+          },
+        ],
+      },
+    },
+  });
+
+  const projectFinserv = await prisma.project.create({
+    data: {
+      name: "Compliance Copilot",
+      clientId: clientFinserv.id,
+      description: "LLM-assisted KYC document review with an immutable audit trail.",
+      startDate: new Date("2025-05-01"),
+      endDate: new Date("2025-12-15"),
+      budget: 560000,
+      status: ProjectStatus.PLANNING,
+      managerId: manager.id,
+      members: {
+        create: [
+          { userId: manager.id, roleLabel: "Delivery Lead", allocation: 25 },
+          { userId: engineer.id, roleLabel: "ML Engineer", allocation: 50 },
+          { userId: demoUser.id, roleLabel: "Solution Architect", allocation: 40 },
+        ],
+      },
+      milestones: {
+        create: [
+          {
+            title: "Requirements and risk workshop",
+            description: "Regulatory scope and data map.",
+            dueDate: new Date("2025-05-20"),
+          },
+        ],
+      },
+    },
+  });
+
+  const projectBright = await prisma.project.create({
+    data: {
+      name: "Adaptive Learning Engine",
+      clientId: clientBright.id,
+      description: "Personalized course recommendations and progress insights.",
+      startDate: new Date("2024-11-01"),
+      endDate: new Date("2025-04-30"),
+      budget: 300000,
+      status: ProjectStatus.COMPLETED,
+      managerId: manager.id,
+      members: {
+        create: [{ userId: engineer.id, roleLabel: "Full-stack Engineer", allocation: 70 }],
+      },
+    },
+  });
+
+  await prisma.task.createMany({
+    data: [
+      { projectId: projectNova.id, title: "Design POS connector", description: "Ingest transactions from store systems.", assignedToId: engineer.id, status: TaskStatus.DONE, priority: Priority.HIGH, dueDate: new Date("2025-04-20"), estimatedHrs: 20 },
+      { projectId: projectNova.id, title: "Build margin dashboard", description: "Gross margin by category and region.", assignedToId: engineer.id, status: TaskStatus.IN_PROGRESS, priority: Priority.MEDIUM, dueDate: new Date("2025-07-10"), estimatedHrs: 16 },
+      { projectId: projectNova.id, title: "Cohort retention report", description: "Repeat-purchase cohort visualisation.", assignedToId: demoUser.id, status: TaskStatus.TODO, priority: Priority.LOW, dueDate: new Date("2025-07-25"), estimatedHrs: 10 },
+      { projectId: projectFinserv.id, title: "KYC document classifier", description: "Classify and extract fields from ID documents.", assignedToId: engineer.id, status: TaskStatus.BACKLOG, priority: Priority.HIGH, dueDate: new Date("2025-06-30"), estimatedHrs: 40 },
+      { projectId: projectFinserv.id, title: "Audit trail schema", description: "Immutable review-log design.", assignedToId: demoUser.id, status: TaskStatus.REVIEW, priority: Priority.URGENT, dueDate: new Date("2025-06-05"), estimatedHrs: 12 },
+      { projectId: projectBright.id, title: "Recommendation A/B test", description: "Compare the new engine against the baseline.", assignedToId: engineer.id, status: TaskStatus.DONE, priority: Priority.MEDIUM, dueDate: new Date("2025-03-30"), estimatedHrs: 18 },
+    ],
+  });
+
+  // Invoices spanning the full status range so finance shows a realistic mix.
+  const novaInvoice = await prisma.invoice.create({
+    data: {
+      invoiceNumber: "INV-2025-0002",
+      clientId: clientNova.id,
+      projectId: projectNova.id,
+      amount: 120000,
+      tax: 21600,
+      total: 141600,
+      status: InvoiceStatus.PAID,
+      dueDate: new Date("2025-04-30"),
+      createdById: financeManager.id,
+      items: { create: [{ description: "Analytics platform — phase 1", quantity: 1, price: 120000, total: 120000 }] },
+    },
+  });
+
+  await prisma.invoice.create({
+    data: {
+      invoiceNumber: "INV-2025-0003",
+      clientId: clientFinserv.id,
+      projectId: projectFinserv.id,
+      amount: 90000,
+      tax: 16200,
+      total: 106200,
+      status: InvoiceStatus.OVERDUE,
+      dueDate: new Date("2025-05-10"),
+      createdById: financeManager.id,
+      items: { create: [{ description: "Discovery and risk workshop", quantity: 1, price: 90000, total: 90000 }] },
+    },
+  });
+
+  await prisma.invoice.create({
+    data: {
+      invoiceNumber: "INV-2025-0004",
+      clientId: clientBright.id,
+      projectId: projectBright.id,
+      amount: 60000,
+      tax: 10800,
+      total: 70800,
+      status: InvoiceStatus.DRAFT,
+      dueDate: new Date("2025-06-30"),
+      createdById: financeManager.id,
+      items: { create: [{ description: "Post-launch support — Q2", quantity: 1, price: 60000, total: 60000 }] },
+    },
+  });
+
+  const novaRevenue = await prisma.revenue.create({
+    data: { title: "Phase 1 payment — Nova Retail", source: "Client Payment", amount: 141600, receivedAt: new Date("2025-05-02"), createdById: financeManager.id },
+  });
+  await prisma.transaction.create({
+    data: { type: TransactionType.REVENUE, amount: 141600, reference: novaInvoice.invoiceNumber, revenueId: novaRevenue.id, createdById: financeManager.id },
+  });
+
+  const payrollExpense = await prisma.expense.create({
+    data: { title: "Engineering payroll — April", category: "Payroll", amount: 210000, spentAt: new Date("2025-04-30"), createdById: financeManager.id, notes: "Monthly engineering salaries." },
+  });
+  await prisma.transaction.create({
+    data: { type: TransactionType.EXPENSE, amount: 210000, reference: "PAYROLL-APR-2025", expenseId: payrollExpense.id, createdById: financeManager.id },
+  });
+
+  const saasExpense = await prisma.expense.create({
+    data: { title: "SaaS tooling subscriptions", category: "Software", amount: 34000, spentAt: new Date("2025-04-12"), createdById: financeManager.id, notes: "Design, CI, and monitoring tools." },
+  });
+  await prisma.transaction.create({
+    data: { type: TransactionType.EXPENSE, amount: 34000, reference: "SAAS-APR-2025", expenseId: saasExpense.id, createdById: financeManager.id },
+  });
+
+  // Extra leave balances + a pending request so HR views are populated.
+  await prisma.leaveBalance.createMany({
+    data: [
+      { userId: demoUser.id, leaveType: LeaveType.ANNUAL, totalDays: 18, usedDays: 5, remaining: 13 },
+      { userId: demoUser.id, leaveType: LeaveType.SICK, totalDays: 8, usedDays: 2, remaining: 6 },
+      { userId: manager.id, leaveType: LeaveType.ANNUAL, totalDays: 20, usedDays: 8, remaining: 12 },
+      { userId: manager.id, leaveType: LeaveType.CASUAL, totalDays: 6, usedDays: 1, remaining: 5 },
+    ],
+  });
+
+  await prisma.leaveRequest.create({
+    data: { userId: manager.id, leaveType: LeaveType.CASUAL, startDate: new Date("2025-06-02"), endDate: new Date("2025-06-02"), status: LeaveStatus.PENDING, reason: "Personal errand" },
+  });
+
+  // A few days of attendance for the demo user so timesheet views fill in.
+  await prisma.attendance.createMany({
+    data: [
+      { userId: demoUser.id, date: new Date("2025-04-14"), checkIn: new Date("2025-04-14T03:35:00.000Z"), checkOut: new Date("2025-04-14T12:40:00.000Z"), totalHours: 9 },
+      { userId: demoUser.id, date: new Date("2025-04-15"), checkIn: new Date("2025-04-15T03:32:00.000Z"), checkOut: new Date("2025-04-15T12:30:00.000Z"), totalHours: 9 },
+      { userId: demoUser.id, date: new Date("2025-04-16"), checkIn: new Date("2025-04-16T03:40:00.000Z"), checkOut: new Date("2025-04-16T12:20:00.000Z"), totalHours: 8.5 },
+      { userId: demoUser.id, date: new Date("2025-04-17"), checkIn: new Date("2025-04-17T03:30:00.000Z"), checkOut: new Date("2025-04-17T12:35:00.000Z"), totalHours: 9 },
+    ],
+  });
+
+  await prisma.proposal.create({
+    data: {
+      clientId: clientFinserv.id,
+      projectId: projectFinserv.id,
+      projectName: "Compliance Copilot — Phase 2",
+      description: "Automated regulatory reporting and anomaly detection.",
+      timeline: "16 weeks",
+      pricing: "INR 22,00,000",
+      status: ProposalStatus.DRAFT,
+      createdById: manager.id,
+      blocks: {
+        create: [
+          { heading: "Scope", content: "Extend the copilot with automated filing workflows.", sortOrder: 1 },
+          { heading: "Team", content: "PM, two ML engineers, and a compliance analyst.", sortOrder: 2 },
+        ],
+      },
+    },
+  });
+
+  await prisma.notification.createMany({
+    data: [
+      { userId: demoUser.id, title: "Invoice paid", body: "INV-2025-0002 from Nova Retail Group was marked paid.", actionUrl: `/finance?invoice=${novaInvoice.id}` },
+      { userId: financeManager.id, title: "Invoice overdue", body: "INV-2025-0003 for Finserv Capital is overdue.", actionUrl: `/finance` },
+      { userId: manager.id, title: "New project", body: "Compliance Copilot has entered planning.", actionUrl: `/projects/${projectFinserv.id}` },
+    ],
+  });
+
   console.log(`Seeded ${permissions.length} permissions, ${roles.length} roles, and demo ERP data.`);
 
   // ── HR foundation seed enrichment ──
