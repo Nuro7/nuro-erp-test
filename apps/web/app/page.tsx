@@ -101,12 +101,9 @@ export default function HomePage() {
           )}
         </Button>
 
-        {loading ? (
-          <p className="mt-4 text-sm text-white/60">
-            The server may take up to a minute to wake up on first load. Thanks for
-            your patience.
-          </p>
-        ) : null}
+        <p className="mt-4 text-sm text-white/50">
+          This is a demo environment with sample data for evaluation purposes.
+        </p>
 
         {error ? <p className="mt-4 text-sm text-rose-400">{error}</p> : null}
 
