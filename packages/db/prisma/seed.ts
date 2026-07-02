@@ -112,50 +112,24 @@ const rolePermissions: Record<RoleCode, Array<[string, PermissionAction]>> = {
 };
 
 async function main() {
-  await prisma.rolePermission.deleteMany();
-  await prisma.userRole.deleteMany();
-  await prisma.permission.deleteMany();
-  await prisma.role.deleteMany();
-  await prisma.clientRequestMessage.deleteMany();
-  await prisma.clientRequest.deleteMany();
-  await prisma.clientPortalSession.deleteMany();
-  await prisma.clientMagicLink.deleteMany();
-  await prisma.proposalAcceptance.deleteMany();
-  await prisma.clientContact.deleteMany();
-  await prisma.hrNote.deleteMany();
-  await prisma.employmentStatusEvent.deleteMany();
-  await prisma.reportExport.deleteMany();
-  await prisma.notification.deleteMany();
-  await prisma.document.deleteMany();
-  await prisma.resourceAllocation.deleteMany();
-  await prisma.proposalBlock.deleteMany();
-  await prisma.proposal.deleteMany();
-  await prisma.invoiceItem.deleteMany();
-  await prisma.invoice.deleteMany();
-  await prisma.transaction.deleteMany();
-  await prisma.expense.deleteMany();
-  await prisma.revenue.deleteMany();
-  await prisma.promotionHistory.deleteMany();
-  await prisma.employeeDocument.deleteMany();
-  await prisma.employeeProfile.deleteMany();
-  await prisma.leaveRequest.deleteMany();
-  await prisma.leaveBalance.deleteMany();
-  await prisma.attendance.deleteMany();
-  await prisma.timeEntry.deleteMany();
-  await prisma.taskAttachment.deleteMany();
-  await prisma.taskComment.deleteMany();
-  await prisma.task.deleteMany();
-  await prisma.milestone.deleteMany();
-  await prisma.projectMember.deleteMany();
-  await prisma.project.deleteMany();
-  await prisma.contract.deleteMany();
-  await prisma.estimate.deleteMany();
-  await prisma.client.deleteMany();
-  await prisma.verificationToken.deleteMany();
-  await prisma.passwordResetToken.deleteMany();
-  await prisma.refreshToken.deleteMany();
-  await prisma.session.deleteMany();
-  await prisma.user.deleteMany();
+  // Wipe all application data before reseeding. A dynamic TRUNCATE … CASCADE
+  // over every public table is used instead of a hand-ordered list of
+  // deleteMany() calls: as new tables are added by later migrations, an
+  // ordered list silently goes stale and a forgotten dependent (e.g. a
+  // credit note referencing a client) trips a foreign-key constraint before
+  // the seed can rebuild. Truncating everything at once with CASCADE is
+  // order-independent and always clears the full schema. `_prisma_migrations`
+  // is excluded so migration history survives.
+  const tables = await prisma.$queryRaw<Array<{ tablename: string }>>`
+    SELECT tablename FROM pg_tables
+    WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'
+  `;
+  if (tables.length > 0) {
+    const names = tables.map((t) => `"public"."${t.tablename}"`).join(", ");
+    await prisma.$executeRawUnsafe(
+      `TRUNCATE TABLE ${names} RESTART IDENTITY CASCADE`,
+    );
+  }
 
   const permissions = await Promise.all(
     permissionSeeds.map(([resource, action]) =>
