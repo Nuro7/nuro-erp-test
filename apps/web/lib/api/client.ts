@@ -52,7 +52,7 @@ function clearAuth() {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(AUTH_STORAGE_KEY);
   window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
-  window.location.href = "/login";
+  window.location.href = "/";
 }
 
 async function handleErrorResponse<T>(response: Response, path: string): Promise<T> {

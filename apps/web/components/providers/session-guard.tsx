@@ -12,8 +12,8 @@ export function SessionGuard({ children }: { children: ReactNode }) {
   const token = useAuthStore((state) => state.accessToken);
 
   useEffect(() => {
-    if (hydrated && !token && pathname !== "/login") {
-      router.replace("/login");
+    if (hydrated && !token && pathname !== "/") {
+      router.replace("/");
     }
   }, [hydrated, pathname, router, token]);
 
