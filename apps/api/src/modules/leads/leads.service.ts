@@ -10,6 +10,9 @@ interface FindAllLeadsQuery extends PaginationDto {
   category?: string;
   assignedToId?: string;
   followUp?: "OVERDUE" | "TODAY" | "UPCOMING" | "NONE";
+  campaignName?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
 }
 
 interface UserContext {
@@ -81,6 +84,18 @@ export class LeadsService {
       }
     }
 
+    if (query.campaignName) {
+      where.campaignName = { equals: query.campaignName, mode: "insensitive" as const };
+    }
+
+    let orderBy: any = [{ nextFollowUpAt: "asc" }, { createdAt: "desc" }];
+    if (query.sortBy) {
+      const order = query.sortOrder === "asc" ? "asc" : "desc";
+      if (["companyName", "contactName", "category", "status", "source", "campaignName", "createdAt", "nextFollowUpAt", "estimatedValue"].includes(query.sortBy)) {
+        orderBy = [{ [query.sortBy]: order }];
+      }
+    }
+
     try {
       const [data, total] = await this.prisma.$transaction([
         this.prisma.lead.findMany({
@@ -91,7 +106,7 @@ export class LeadsService {
           },
           skip,
           take,
-          orderBy: [{ nextFollowUpAt: "asc" }, { createdAt: "desc" }],
+          orderBy,
         }),
         this.prisma.lead.count({ where }),
       ]);

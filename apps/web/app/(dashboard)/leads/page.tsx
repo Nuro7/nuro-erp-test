@@ -117,13 +117,19 @@ export default function LeadsPage() {
   const [followUpFilter, setFollowUpFilter] = useState<string>("ALL");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("ALL");
   const [campaignFilter, setCampaignFilter] = useState<string>("ALL");
+  const [sortBy, setSortBy] = useState<string>("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const queryParams: Record<string, string> = {};
   if (categoryFilter !== "ALL") queryParams.category = categoryFilter;
   if (statusFilter !== "ALL") queryParams.status = statusFilter;
   if (followUpFilter !== "ALL") queryParams.followUp = followUpFilter;
   if (assigneeFilter !== "ALL") queryParams.assignedToId = assigneeFilter;
-  if (campaignFilter !== "ALL") queryParams.search = campaignFilter;
+  if (campaignFilter !== "ALL") queryParams.campaignName = campaignFilter;
+  if (sortBy) {
+    queryParams.sortBy = sortBy;
+    queryParams.sortOrder = sortOrder;
+  }
 
   const query = useLeads(queryParams);
   const clientsQuery = useClients();
@@ -483,6 +489,40 @@ export default function LeadsPage() {
         </ChartCard>
       </div>
 
+      {/* Meta Campaign Filter Quick Tabs / Pills */}
+      {metaCampaigns.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-blue-50/40 p-3 dark:border-blue-900/40 dark:bg-slate-900/60">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-700 dark:text-blue-400">
+            <Share2 className="size-4" /> Meta Campaigns:
+          </div>
+          <button
+            type="button"
+            onClick={() => setCampaignFilter("ALL")}
+            className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
+              campaignFilter === "ALL"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "bg-white text-slate-700 hover:bg-blue-100 dark:bg-slate-800 dark:text-slate-200"
+            }`}
+          >
+            All Campaigns ({metaCampaigns.reduce((a, b) => a + b.leadCount, 0)})
+          </button>
+          {metaCampaigns.map((c) => (
+            <button
+              key={c.campaignName}
+              type="button"
+              onClick={() => setCampaignFilter(c.campaignName)}
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
+                campaignFilter === c.campaignName
+                  ? "bg-blue-600 text-white shadow-sm font-semibold"
+                  : "bg-white text-slate-700 hover:bg-blue-100 dark:bg-slate-800 dark:text-slate-200"
+              }`}
+            >
+              🎯 {c.campaignName} ({c.leadCount})
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Advanced Filter Toolbar */}
       <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3 text-sm shadow-sm dark:border-slate-800">
         <div className="font-semibold text-slate-700 dark:text-slate-300">Filters:</div>
@@ -574,11 +614,33 @@ export default function LeadsPage() {
           </div>
         )}
 
-        {(categoryFilter !== "ALL" || statusFilter !== "ALL" || followUpFilter !== "ALL" || assigneeFilter !== "ALL" || campaignFilter !== "ALL") && (
+        {/* Sort By Filter */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-slate-500">Sort By:</span>
+          <select
+            value={`${sortBy}_${sortOrder}`}
+            onChange={(e) => {
+              const [sb, so] = e.target.value.split("_");
+              setSortBy(sb);
+              setSortOrder(so as "asc" | "desc");
+            }}
+            className="rounded border border-slate-300 bg-background px-2.5 py-1 text-xs font-medium focus:outline-none dark:border-slate-700"
+          >
+            <option value="createdAt_desc">Newest First</option>
+            <option value="createdAt_asc">Oldest First</option>
+            <option value="campaignName_asc">Meta Campaign (A-Z)</option>
+            <option value="campaignName_desc">Meta Campaign (Z-A)</option>
+            <option value="companyName_asc">Company (A-Z)</option>
+            <option value="estimatedValue_desc">Highest Value</option>
+            <option value="nextFollowUpAt_asc">Next Follow-up Date</option>
+          </select>
+        </div>
+
+        {(categoryFilter !== "ALL" || statusFilter !== "ALL" || followUpFilter !== "ALL" || assigneeFilter !== "ALL" || campaignFilter !== "ALL" || sortBy !== "createdAt") && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { setCategoryFilter("ALL"); setStatusFilter("ALL"); setFollowUpFilter("ALL"); setAssigneeFilter("ALL"); setCampaignFilter("ALL"); }}
+            onClick={() => { setCategoryFilter("ALL"); setStatusFilter("ALL"); setFollowUpFilter("ALL"); setAssigneeFilter("ALL"); setCampaignFilter("ALL"); setSortBy("createdAt"); setSortOrder("desc"); }}
             className="ml-auto text-xs text-slate-500 hover:text-slate-900"
           >
             Reset Filters
