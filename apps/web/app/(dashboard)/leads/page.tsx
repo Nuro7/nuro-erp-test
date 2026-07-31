@@ -127,7 +127,10 @@ export default function LeadsPage() {
 
   const query = useLeads(queryParams);
   const clientsQuery = useClients();
-  const usersQuery = useUsers();
+  const { data: salesStaff = [] } = useQuery<Array<{ id: string; firstName: string; lastName: string; email: string }>>({
+    queryKey: ["leads-sales-staff"],
+    queryFn: () => apiFetch("/leads/sales-staff"),
+  });
 
   const { data: dynamicCategories = CATEGORY_OPTIONS } = useQuery<string[]>({
     queryKey: ["leads-categories"],
@@ -216,7 +219,9 @@ export default function LeadsPage() {
 
   const leads = toArray<LeadRow>(query.data);
   const clients = toArray<{ id: string; companyName: string }>(clientsQuery.data);
-  const users = toArray<{ id: string; firstName: string; lastName: string }>(usersQuery.data);
+  const users = salesStaff.length > 0
+    ? salesStaff
+    : toArray<{ id: string; firstName: string; lastName: string }>(usersQuery.data);
 
   const getFollowUpStatus = (dateStr?: string) => {
     if (!dateStr) return { label: "No Follow-up", tone: "neutral" as const, icon: Clock };

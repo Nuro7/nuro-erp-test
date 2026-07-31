@@ -463,10 +463,10 @@ export class LeadsService {
   }
 
   /**
-   * Get staff members with CRM access along with their lead workload counts.
+   * Get active staff members belonging to the Sales / Business Development team.
+   * Excludes software developers, engineers, designers, etc. who do not handle leads.
    */
-  async getStaffWorkload() {
-    // Find active staff (exclude client-portal accounts)
+  async getSalesStaff() {
     const staffUsers = await this.prisma.user.findMany({
       where: {
         status: "ACTIVE",
@@ -479,9 +479,61 @@ export class LeadsService {
         email: true,
         avatarUrl: true,
         roles: { select: { role: { select: { code: true, name: true } } } },
+        employeeProfile: { select: { department: true, designation: true } },
       },
       orderBy: { firstName: "asc" },
     });
+
+    return staffUsers.filter((u) => {
+      const dept = (u.employeeProfile?.department || "").toLowerCase();
+      const desig = (u.employeeProfile?.designation || "").toLowerCase();
+      const roleNames = u.roles.map((r) => r.role.name.toLowerCase());
+      const roleCodes = u.roles.map((r) => r.role.code);
+
+      const isSalesDept =
+        dept.includes("sales") ||
+        dept.includes("business") ||
+        dept.includes("bd") ||
+        dept.includes("crm") ||
+        dept.includes("growth") ||
+        dept.includes("marketing");
+
+      const isSalesDesig =
+        desig.includes("sales") ||
+        desig.includes("account exec") ||
+        desig.includes("business dev") ||
+        desig.includes("closer") ||
+        desig.includes("sdr") ||
+        desig.includes("bde");
+
+      const isSalesRole = roleNames.some(
+        (r) => r.includes("sales") || r.includes("business") || r.includes("lead"),
+      );
+
+      const isAdmin = roleCodes.some((code) => ["SUPER_ADMIN", "ADMIN"].includes(code));
+
+      const isDevOrEng =
+        dept.includes("engineering") ||
+        dept.includes("dev") ||
+        dept.includes("tech") ||
+        desig.includes("developer") ||
+        desig.includes("engineer") ||
+        desig.includes("qa") ||
+        desig.includes("designer");
+
+      if (isDevOrEng && !isSalesDept && !isSalesRole && !isSalesDesig) {
+        return false;
+      }
+
+      return isSalesDept || isSalesDesig || isSalesRole || isAdmin || !isDevOrEng;
+    });
+  }
+
+  /**
+   * Get staff members with CRM access along with their lead workload counts.
+   */
+  async getStaffWorkload() {
+    const staffUsers = await this.getSalesStaff();
 
     const leadCounts = await this.prisma.lead.groupBy({
       by: ["assignedToId", "status"],
@@ -510,6 +562,8 @@ export class LeadsService {
         email: u.email,
         avatarUrl: u.avatarUrl,
         roles: u.roles.map((r) => r.role.name),
+        department: u.employeeProfile?.department || "Sales",
+        designation: u.employeeProfile?.designation || "Sales Exec",
         workload: workloadMap[u.id] || { total: 0, active: 0, won: 0, lost: 0 },
       })),
       unassignedCount,
@@ -517,7 +571,7 @@ export class LeadsService {
   }
 
   /**
-   * Auto-distribute leads equally across active staff members using Round-Robin.
+   * Auto-distribute leads equally across active sales staff members using Round-Robin.
    * If leadIds is omitted, auto-distributes all currently unassigned leads.
    * If rebalanceAll = true, re-balances ALL non-won/non-lost active leads equally!
    */
@@ -525,18 +579,12 @@ export class LeadsService {
     let targetStaffIds = opts.staffUserIds && opts.staffUserIds.length > 0 ? opts.staffUserIds : [];
     
     if (targetStaffIds.length === 0) {
-      const activeStaff = await this.prisma.user.findMany({
-        where: {
-          status: "ACTIVE",
-          clientContacts: { none: {} },
-        },
-        select: { id: true },
-      });
-      targetStaffIds = activeStaff.map((u) => u.id);
+      const salesStaff = await this.getSalesStaff();
+      targetStaffIds = salesStaff.map((u) => u.id);
     }
 
     if (targetStaffIds.length === 0) {
-      throw new NotFoundException("No active staff members available for lead distribution.");
+      throw new NotFoundException("No active sales staff members available for lead distribution.");
     }
 
     let leadsToDistribute: Array<{ id: string }> = [];

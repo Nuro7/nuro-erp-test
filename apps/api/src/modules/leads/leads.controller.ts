@@ -117,6 +117,13 @@ export class LeadsController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleCode.SUPER_ADMIN, RoleCode.ADMIN, RoleCode.PROJECT_MANAGER, RoleCode.HR_MANAGER, RoleCode.EMPLOYEE)
+  @Get("sales-staff")
+  getSalesStaff() {
+    return this.leadsService.getSalesStaff();
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleCode.SUPER_ADMIN, RoleCode.ADMIN, RoleCode.PROJECT_MANAGER, RoleCode.HR_MANAGER, RoleCode.EMPLOYEE)
   @Get("meta-campaigns")
   getMetaCampaigns() {
     return this.leadsService.getMetaCampaigns();
