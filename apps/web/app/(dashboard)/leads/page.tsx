@@ -524,116 +524,122 @@ export default function LeadsPage() {
       )}
 
       {/* Advanced Filter Toolbar */}
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3 text-sm shadow-sm dark:border-slate-800">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3 text-sm shadow-sm">
         <div className="font-semibold text-slate-700 dark:text-slate-300">Filters:</div>
         
         {/* Category Filter */}
         <div className="flex items-center gap-1.5">
           <Tag className="size-3.5 text-slate-400" />
-          <span className="text-xs text-slate-500">Category:</span>
-          <select
+          <span className="text-xs text-slate-500 font-medium">Category:</span>
+          <Select
+            size="sm"
             value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="rounded border border-slate-300 bg-background px-2.5 py-1 text-xs font-medium focus:outline-none dark:border-slate-700"
-          >
-            <option value="ALL">All Categories</option>
-            {dynamicCategories.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+            onValueChange={setCategoryFilter}
+            options={[
+              { value: "ALL", label: "All Categories" },
+              ...dynamicCategories.map((c) => ({ value: c, label: c })),
+            ]}
+            className="w-36"
+          />
         </div>
 
         {/* Status Filter */}
         <div className="flex items-center gap-1.5">
           <CheckCircle2 className="size-3.5 text-slate-400" />
-          <span className="text-xs text-slate-500">Status:</span>
-          <select
+          <span className="text-xs text-slate-500 font-medium">Status:</span>
+          <Select
+            size="sm"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded border border-slate-300 bg-background px-2.5 py-1 text-xs font-medium focus:outline-none dark:border-slate-700"
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="NEW">New</option>
-            <option value="CONTACTED">Contacted</option>
-            <option value="QUALIFIED">Qualified</option>
-            <option value="PROPOSAL_SENT">Proposal Sent</option>
-            <option value="NEGOTIATION">Negotiation</option>
-            <option value="WON">Won</option>
-            <option value="LOST">Lost</option>
-          </select>
+            onValueChange={setStatusFilter}
+            options={[
+              { value: "ALL", label: "All Statuses" },
+              { value: "NEW", label: "New" },
+              { value: "CONTACTED", label: "Contacted" },
+              { value: "QUALIFIED", label: "Qualified" },
+              { value: "PROPOSAL_SENT", label: "Proposal Sent" },
+              { value: "NEGOTIATION", label: "Negotiation" },
+              { value: "WON", label: "Won" },
+              { value: "LOST", label: "Lost" },
+            ]}
+            className="w-36"
+          />
         </div>
 
         {/* Follow-up Filter */}
         <div className="flex items-center gap-1.5">
           <Calendar className="size-3.5 text-slate-400" />
-          <span className="text-xs text-slate-500">Follow-up:</span>
-          <select
+          <span className="text-xs text-slate-500 font-medium">Follow-up:</span>
+          <Select
+            size="sm"
             value={followUpFilter}
-            onChange={(e) => setFollowUpFilter(e.target.value)}
-            className="rounded border border-slate-300 bg-background px-2.5 py-1 text-xs font-medium focus:outline-none dark:border-slate-700"
-          >
-            <option value="ALL">All Follow-ups</option>
-            <option value="OVERDUE">🚨 Overdue</option>
-            <option value="TODAY">⏰ Due Today</option>
-            <option value="UPCOMING">📅 Scheduled</option>
-            <option value="NONE">No Follow-up</option>
-          </select>
+            onValueChange={setFollowUpFilter}
+            options={[
+              { value: "ALL", label: "All Follow-ups" },
+              { value: "OVERDUE", label: "🚨 Overdue" },
+              { value: "TODAY", label: "⏰ Due Today" },
+              { value: "UPCOMING", label: "📅 Scheduled" },
+              { value: "NONE", label: "No Follow-up" },
+            ]}
+            className="w-36"
+          />
         </div>
 
         {/* Assignee Filter */}
         <div className="flex items-center gap-1.5">
           <Users className="size-3.5 text-slate-400" />
-          <span className="text-xs text-slate-500">Assignee:</span>
-          <select
+          <span className="text-xs text-slate-500 font-medium">Assignee:</span>
+          <Select
+            size="sm"
             value={assigneeFilter}
-            onChange={(e) => setAssigneeFilter(e.target.value)}
-            className="rounded border border-slate-300 bg-background px-2.5 py-1 text-xs font-medium focus:outline-none dark:border-slate-700"
-          >
-            <option value="ALL">All Staff</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
-            ))}
-          </select>
+            onValueChange={setAssigneeFilter}
+            options={[
+              { value: "ALL", label: "All Staff" },
+              ...users.map((u) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` })),
+            ]}
+            className="w-36"
+          />
         </div>
 
         {/* Meta Campaign Filter */}
         {metaCampaigns.length > 0 && (
           <div className="flex items-center gap-1.5">
             <Share2 className="size-3.5 text-blue-500" />
-            <span className="text-xs text-slate-500">Meta Campaign:</span>
-            <select
+            <span className="text-xs text-slate-500 font-medium">Meta Campaign:</span>
+            <Select
+              size="sm"
               value={campaignFilter}
-              onChange={(e) => setCampaignFilter(e.target.value)}
-              className="rounded border border-blue-300 bg-blue-50/50 px-2.5 py-1 text-xs font-medium focus:outline-none dark:border-blue-800 dark:bg-slate-900"
-            >
-              <option value="ALL">All Meta Campaigns ({metaCampaigns.reduce((a, b) => a + b.leadCount, 0)})</option>
-              {metaCampaigns.map((c) => (
-                <option key={c.campaignName} value={c.campaignName}>{c.campaignName} ({c.leadCount})</option>
-              ))}
-            </select>
+              onValueChange={setCampaignFilter}
+              options={[
+                { value: "ALL", label: `All Meta Campaigns (${metaCampaigns.reduce((a, b) => a + b.leadCount, 0)})` },
+                ...metaCampaigns.map((c) => ({ value: c.campaignName, label: `${c.campaignName} (${c.leadCount})` })),
+              ]}
+              className="w-44"
+            />
           </div>
         )}
 
         {/* Sort By Filter */}
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-slate-500">Sort By:</span>
-          <select
+          <span className="text-xs text-slate-500 font-medium">Sort By:</span>
+          <Select
+            size="sm"
             value={`${sortBy}_${sortOrder}`}
-            onChange={(e) => {
-              const [sb, so] = e.target.value.split("_");
+            onValueChange={(val) => {
+              const [sb, so] = val.split("_");
               setSortBy(sb);
               setSortOrder(so as "asc" | "desc");
             }}
-            className="rounded border border-slate-300 bg-background px-2.5 py-1 text-xs font-medium focus:outline-none dark:border-slate-700"
-          >
-            <option value="createdAt_desc">Newest First</option>
-            <option value="createdAt_asc">Oldest First</option>
-            <option value="campaignName_asc">Meta Campaign (A-Z)</option>
-            <option value="campaignName_desc">Meta Campaign (Z-A)</option>
-            <option value="companyName_asc">Company (A-Z)</option>
-            <option value="estimatedValue_desc">Highest Value</option>
-            <option value="nextFollowUpAt_asc">Next Follow-up Date</option>
-          </select>
+            options={[
+              { value: "createdAt_desc", label: "Newest First" },
+              { value: "createdAt_asc", label: "Oldest First" },
+              { value: "campaignName_asc", label: "Meta Campaign (A-Z)" },
+              { value: "campaignName_desc", label: "Meta Campaign (Z-A)" },
+              { value: "companyName_asc", label: "Company (A-Z)" },
+              { value: "estimatedValue_desc", label: "Highest Value" },
+              { value: "nextFollowUpAt_asc", label: "Next Follow-up Date" },
+            ]}
+            className="w-40"
+          />
         </div>
 
         {(categoryFilter !== "ALL" || statusFilter !== "ALL" || followUpFilter !== "ALL" || assigneeFilter !== "ALL" || campaignFilter !== "ALL" || sortBy !== "createdAt") && (
@@ -827,40 +833,36 @@ export default function LeadsPage() {
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="space-y-1">
                 <div className="text-xs uppercase tracking-wider text-slate-400 font-medium">Category</div>
-                <select
+                <Select
+                  size="sm"
                   value={detailLead.category || "General"}
-                  onChange={(e) => {
-                    const newCat = e.target.value;
+                  onValueChange={(newCat) => {
                     updateLeadMutation.mutate({ id: detailLead.id, category: newCat });
                     setDetailLead({ ...detailLead, category: newCat });
                   }}
-                  className="w-full rounded border border-slate-300 bg-background px-2.5 py-1.5 text-xs font-medium focus:outline-none dark:border-slate-700"
-                >
-                  {dynamicCategories.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                  options={dynamicCategories.map((c) => ({ value: c, label: c }))}
+                />
               </div>
 
               <div className="space-y-1">
                 <div className="text-xs uppercase tracking-wider text-slate-400 font-medium">Status</div>
-                <select
+                <Select
+                  size="sm"
                   value={detailLead.status}
-                  onChange={(e) => {
-                    const newStatus = e.target.value;
+                  onValueChange={(newStatus) => {
                     updateLeadMutation.mutate({ id: detailLead.id, status: newStatus });
                     setDetailLead({ ...detailLead, status: newStatus });
                   }}
-                  className="w-full rounded border border-slate-300 bg-background px-2.5 py-1.5 text-xs font-semibold focus:outline-none dark:border-slate-700"
-                >
-                  <option value="NEW">New</option>
-                  <option value="CONTACTED">Contacted</option>
-                  <option value="QUALIFIED">Qualified</option>
-                  <option value="PROPOSAL_SENT">Proposal Sent</option>
-                  <option value="NEGOTIATION">Negotiation</option>
-                  <option value="WON">Won</option>
-                  <option value="LOST">Lost</option>
-                </select>
+                  options={[
+                    { value: "NEW", label: "New" },
+                    { value: "CONTACTED", label: "Contacted" },
+                    { value: "QUALIFIED", label: "Qualified" },
+                    { value: "PROPOSAL_SENT", label: "Proposal Sent" },
+                    { value: "NEGOTIATION", label: "Negotiation" },
+                    { value: "WON", label: "Won" },
+                    { value: "LOST", label: "Lost" },
+                  ]}
+                />
               </div>
 
               <div className="space-y-1">
@@ -877,21 +879,19 @@ export default function LeadsPage() {
 
               <div className="space-y-1">
                 <div className="text-xs uppercase tracking-wider text-slate-400 font-medium">Assigned Sales Staff</div>
-                <select
+                <Select
+                  size="sm"
                   value={detailLead.assignedToId || ""}
-                  onChange={(e) => {
-                    const targetId = e.target.value;
+                  onValueChange={(targetId) => {
                     updateLeadMutation.mutate({ id: detailLead.id, assignedToId: targetId });
                     const assigned = users.find((u) => u.id === targetId);
                     setDetailLead({ ...detailLead, assignedToId: targetId, assignedTo: assigned });
                   }}
-                  className="w-full rounded border border-slate-300 bg-background px-2.5 py-1.5 text-xs font-medium focus:outline-none dark:border-slate-700"
-                >
-                  <option value="">Unassigned</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
-                  ))}
-                </select>
+                  options={[
+                    { value: "", label: "Unassigned" },
+                    ...users.map((u) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` })),
+                  ]}
+                />
               </div>
 
               <div>
