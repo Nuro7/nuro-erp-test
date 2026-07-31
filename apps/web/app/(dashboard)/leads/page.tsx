@@ -127,6 +127,7 @@ export default function LeadsPage() {
 
   const query = useLeads(queryParams);
   const clientsQuery = useClients();
+  const usersQuery = useUsers();
   const { data: salesStaff = [] } = useQuery<Array<{ id: string; firstName: string; lastName: string; email: string }>>({
     queryKey: ["leads-sales-staff"],
     queryFn: () => apiFetch("/leads/sales-staff"),
