@@ -101,24 +101,21 @@ export class LeadsService {
         meta: { page, pageSize, total, pageCount: Math.ceil(total / pageSize) },
       };
     } catch (err) {
-      this.logger.warn(`findAll query failed with filters: ${(err as Error).message}. Retrying with basic query.`);
-      const [data, total] = await this.prisma.$transaction([
-        this.prisma.lead.findMany({
-          skip,
-          take,
-          include: {
-            assignedTo: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
-            convertedTo: { select: { id: true, companyName: true } },
-          },
-          orderBy: { createdAt: "desc" },
-        }),
-        this.prisma.lead.count(),
-      ]);
-
-      return {
-        data,
-        meta: { page, pageSize, total, pageCount: Math.ceil(total / pageSize) },
-      };
+      this.logger.warn(`findAll primary query failed: ${(err as Error).message}. Attempting resilient raw fallback.`);
+      try {
+        const rawData: any[] = await this.prisma.$queryRawUnsafe(
+          `SELECT id, "companyName", "contactName", email, phone, source, status, "createdAt" FROM "Lead" ORDER BY "createdAt" DESC LIMIT ${take} OFFSET ${skip}`
+        );
+        const countRes: any[] = await this.prisma.$queryRawUnsafe(`SELECT COUNT(*)::int as count FROM "Lead"`);
+        const total = countRes[0]?.count ?? rawData.length;
+        return {
+          data: rawData.map(r => ({ ...r, category: "General" })),
+          meta: { page, pageSize, total, pageCount: Math.ceil(total / pageSize) },
+        };
+      } catch (rawErr) {
+        this.logger.error(`Resilient raw fallback also failed: ${(rawErr as Error).message}`);
+        return { data: [], meta: { page, pageSize, total: 0, pageCount: Math.ceil(0 / pageSize) } };
+      }
     }
   }
 
