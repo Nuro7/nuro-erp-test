@@ -1,0 +1,38 @@
+name: Keep API awake
+
+# Pings the Render API health endpoint on a schedule so the free-tier
+# service doesn't spin down (~50s cold start on the next request otherwise).
+# The demo login stays fast because the container is always warm.
+#
+# The target URL is hardcoded below. If you ever change the Render service,
+# either edit KEEP_ALIVE_URL here or set a repository variable of the same
+# name (Settings → Secrets and variables → Actions → Variables) — the
+# variable, when present, overrides the default.
+#
+# This job NEVER fails: a missing/unreachable endpoint is logged, not raised,
+# so scheduled runs don't spam failure emails.
+
+on:
+  schedule:
+    # Every 10 minutes. Render sleeps after ~15 min idle, so this keeps a
+    # comfortable margin even when GitHub delays scheduled runs.
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          URL="${{ vars.KEEP_ALIVE_URL }}"
+          if [ -z "$URL" ]; then
+            URL="https://nuro-erp-test.onrender.com/api/v1/health"
+          fi
+          echo "Pinging $URL"
+          # --max-time 90 tolerates a cold start (a slow first response is
+          # exactly the wake-up we want). Any failure is logged, not raised —
+          # `|| true` keeps the job green so it never emails on a transient
+          # blip or while the server is still waking.
+          curl -fsS --max-time 90 "$URL" && echo "OK — API is awake." || echo "Ping non-200 (server may be waking up). Ignored."
+          exit 0
