@@ -107,4 +107,18 @@ export class LeadsController {
   bulkAssignLeads(@Body() body: { leadIds: string[]; targetStaffId: string }) {
     return this.leadsService.bulkAssignLeads(body.leadIds, body.targetStaffId);
   }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleCode.SUPER_ADMIN, RoleCode.ADMIN, RoleCode.PROJECT_MANAGER, RoleCode.HR_MANAGER, RoleCode.EMPLOYEE)
+  @Get("categories")
+  getCategories() {
+    return this.leadsService.getCategories();
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleCode.SUPER_ADMIN, RoleCode.ADMIN, RoleCode.PROJECT_MANAGER, RoleCode.HR_MANAGER, RoleCode.EMPLOYEE)
+  @Get("meta-campaigns")
+  getMetaCampaigns() {
+    return this.leadsService.getMetaCampaigns();
+  }
 }

@@ -1,4 +1,4 @@
-import { IsDecimal, IsEmail, IsEnum, IsOptional, IsString, ValidateIf } from "class-validator";
+import { IsNumber, IsEmail, IsEnum, IsOptional, IsString, ValidateIf } from "class-validator";
 import { LeadStatus } from "@prisma/client";
 
 export class CreateLeadDto {
@@ -33,7 +33,7 @@ export class CreateLeadDto {
   status?: LeadStatus;
 
   @IsOptional()
-  @IsDecimal()
+  @IsNumber()
   estimatedValue?: number;
 
   @IsOptional()

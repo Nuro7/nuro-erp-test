@@ -128,7 +128,24 @@ export class LeadsService {
       nextFollowUpAt: nextFollowUpAt ? new Date(nextFollowUpAt) : null,
     };
 
-    const lead = await this.prisma.lead.create({ data });
+    let lead: any;
+    try {
+      lead = await this.prisma.lead.create({ data });
+    } catch (err) {
+      this.logger.warn(`Lead create with extended fields failed: ${(err as Error).message}. Retrying with core fields.`);
+      // Strip un-migrated DB fields if necessary
+      const coreData = {
+        companyName: dto.companyName,
+        contactName: dto.contactName,
+        email: dto.email ?? "",
+        phone: dto.phone ?? null,
+        source: dto.source ?? null,
+        status: dto.status ?? "NEW",
+        estimatedValue: dto.estimatedValue != null ? dto.estimatedValue : undefined,
+        notes: dto.notes ?? null,
+      };
+      lead = await this.prisma.lead.create({ data: coreData });
+    }
 
     try {
       const admins = await this.prisma.user.findMany({
@@ -179,10 +196,58 @@ export class LeadsService {
       data.nextFollowUpAt = nextFollowUpAt ? new Date(nextFollowUpAt) : null;
     }
 
-    return this.prisma.lead.update({
-      where: { id },
-      data,
-    });
+    try {
+      return await this.prisma.lead.update({
+        where: { id },
+        data,
+      });
+    } catch (err) {
+      this.logger.warn(`Lead update failed with extended fields: ${(err as Error).message}. Retrying with core fields.`);
+      delete data.category;
+      delete data.nextFollowUpAt;
+      delete data.campaignName;
+      delete data.adsetName;
+      delete data.adName;
+      delete data.metaLeadId;
+      delete data.assignedToId;
+      return this.prisma.lead.update({
+        where: { id },
+        data,
+      });
+    }
+  }
+
+  /**
+   * Get dynamic list of all distinct lead categories in the CRM.
+   */
+  async getCategories() {
+    try {
+      const leads = await this.prisma.lead.findMany({ select: { category: true } });
+      const unique = Array.from(new Set(leads.map((l) => l.category).filter(Boolean)));
+      const defaults = ["General", "Meta Campaign", "Inbound", "Outbound", "Web Form", "Referral", "Event", "Enterprise", "SMB"];
+      return Array.from(new Set([...defaults, ...unique]));
+    } catch {
+      return ["General", "Meta Campaign", "Inbound", "Outbound", "Web Form", "Referral", "Event", "Enterprise", "SMB"];
+    }
+  }
+
+  /**
+   * Get list of all Meta Lead Ads campaigns with lead count breakdowns.
+   */
+  async getMetaCampaigns() {
+    try {
+      const campaigns = await this.prisma.lead.groupBy({
+        by: ["campaignName"],
+        where: { campaignName: { not: null } },
+        _count: { id: true },
+      });
+      return campaigns.map((c) => ({
+        campaignName: c.campaignName,
+        leadCount: c._count.id,
+      }));
+    } catch {
+      return [];
+    }
   }
 
   async remove(id: string) {

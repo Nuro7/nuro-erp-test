@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, UserPlus, Trash2, TrendingUp, Upload, Share2, Calendar, Tag, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 import { ListPageLayout } from "@/components/layouts/list-page-layout";
 import { CsvImportDialog } from "@/components/shared/csv-import-dialog";
@@ -116,16 +116,28 @@ export default function LeadsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [followUpFilter, setFollowUpFilter] = useState<string>("ALL");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("ALL");
+  const [campaignFilter, setCampaignFilter] = useState<string>("ALL");
 
   const queryParams: Record<string, string> = {};
   if (categoryFilter !== "ALL") queryParams.category = categoryFilter;
   if (statusFilter !== "ALL") queryParams.status = statusFilter;
   if (followUpFilter !== "ALL") queryParams.followUp = followUpFilter;
   if (assigneeFilter !== "ALL") queryParams.assignedToId = assigneeFilter;
+  if (campaignFilter !== "ALL") queryParams.search = campaignFilter;
 
   const query = useLeads(queryParams);
   const clientsQuery = useClients();
   const usersQuery = useUsers();
+
+  const { data: dynamicCategories = CATEGORY_OPTIONS } = useQuery<string[]>({
+    queryKey: ["leads-categories"],
+    queryFn: () => apiFetch("/leads/categories"),
+  });
+
+  const { data: metaCampaigns = [] } = useQuery<Array<{ campaignName: string; leadCount: number }>>({
+    queryKey: ["leads-meta-campaigns"],
+    queryFn: () => apiFetch("/leads/meta-campaigns"),
+  });
 
   const createMutation = useCreateLead();
   const convertMutation = useConvertLead();
@@ -390,7 +402,7 @@ export default function LeadsPage() {
             className="rounded border border-slate-300 bg-background px-2.5 py-1 text-xs font-medium focus:outline-none dark:border-slate-700"
           >
             <option value="ALL">All Categories</option>
-            {CATEGORY_OPTIONS.map((c) => (
+            {dynamicCategories.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
@@ -449,11 +461,29 @@ export default function LeadsPage() {
           </select>
         </div>
 
-        {(categoryFilter !== "ALL" || statusFilter !== "ALL" || followUpFilter !== "ALL" || assigneeFilter !== "ALL") && (
+        {/* Meta Campaign Filter */}
+        {metaCampaigns.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <Share2 className="size-3.5 text-blue-500" />
+            <span className="text-xs text-slate-500">Meta Campaign:</span>
+            <select
+              value={campaignFilter}
+              onChange={(e) => setCampaignFilter(e.target.value)}
+              className="rounded border border-blue-300 bg-blue-50/50 px-2.5 py-1 text-xs font-medium focus:outline-none dark:border-blue-800 dark:bg-slate-900"
+            >
+              <option value="ALL">All Meta Campaigns ({metaCampaigns.reduce((a, b) => a + b.leadCount, 0)})</option>
+              {metaCampaigns.map((c) => (
+                <option key={c.campaignName} value={c.campaignName}>{c.campaignName} ({c.leadCount})</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {(categoryFilter !== "ALL" || statusFilter !== "ALL" || followUpFilter !== "ALL" || assigneeFilter !== "ALL" || campaignFilter !== "ALL") && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { setCategoryFilter("ALL"); setStatusFilter("ALL"); setFollowUpFilter("ALL"); setAssigneeFilter("ALL"); }}
+            onClick={() => { setCategoryFilter("ALL"); setStatusFilter("ALL"); setFollowUpFilter("ALL"); setAssigneeFilter("ALL"); setCampaignFilter("ALL"); }}
             className="ml-auto text-xs text-slate-500 hover:text-slate-900"
           >
             Reset Filters
@@ -488,11 +518,26 @@ export default function LeadsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <FormField label="Category">
-                <Select
-                  value={form.watch("category") || "General"}
-                  onValueChange={(v) => form.setValue("category", v)}
-                  options={CATEGORY_OPTIONS.map((c) => ({ value: c, label: c }))}
-                />
+                <div className="space-y-1.5">
+                  <Select
+                    value={dynamicCategories.includes(form.watch("category") || "") ? form.watch("category") : "CUSTOM"}
+                    onValueChange={(v) => {
+                      if (v !== "CUSTOM") form.setValue("category", v);
+                      else form.setValue("category", "");
+                    }}
+                    options={[
+                      ...dynamicCategories.map((c) => ({ value: c, label: c })),
+                      { value: "CUSTOM", label: "➕ Create Custom Category..." },
+                    ]}
+                  />
+                  {(!dynamicCategories.includes(form.watch("category") || "") || form.watch("category") === "") && (
+                    <Input
+                      placeholder="Type custom category name..."
+                      value={form.watch("category") || ""}
+                      onChange={(e) => form.setValue("category", e.target.value)}
+                    />
+                  )}
+                </div>
               </FormField>
               <FormField label="Status">
                 <Select
