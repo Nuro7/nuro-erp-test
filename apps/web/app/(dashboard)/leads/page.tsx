@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, UserPlus, Trash2, TrendingUp, Upload, Share2, Calendar, Tag, CheckCircle2, Clock, AlertTriangle, Pencil } from "lucide-react";
+import { Plus, UserPlus, Trash2, TrendingUp, Upload, Share2, Calendar, Tag, CheckCircle2, Clock, AlertTriangle, Pencil, Download, LayoutGrid, List } from "lucide-react";
 import { ListPageLayout } from "@/components/layouts/list-page-layout";
 import { CsvImportDialog } from "@/components/shared/csv-import-dialog";
 import { LEAD_IMPORT_FIELDS } from "@/components/shared/csv-import-fields";
@@ -428,6 +428,36 @@ export default function LeadsPage() {
     }
   };
 
+  const exportToCsv = () => {
+    if (!leads.length) {
+      toast({ variant: "info", title: "No leads to export" });
+      return;
+    }
+    const headers = ["Company Name", "Contact Name", "Email", "Phone", "Category", "Status", "Estimated Value", "Source", "Campaign", "Follow-up Date", "Assigned To"];
+    const rows = leads.map((l) => [
+      `"${(l.companyName || "").replace(/"/g, '""')}"`,
+      `"${(l.contactName || "").replace(/"/g, '""')}"`,
+      `"${(l.email || "").replace(/"/g, '""')}"`,
+      `"${(l.phone || "").replace(/"/g, '""')}"`,
+      `"${(l.category || "General").replace(/"/g, '""')}"`,
+      `"${(l.status || "").replace(/"/g, '""')}"`,
+      `"${l.estimatedValue || ""}"`,
+      `"${(l.source || "").replace(/"/g, '""')}"`,
+      `"${(l.campaignName || "").replace(/"/g, '""')}"`,
+      `"${l.nextFollowUpAt ? new Date(l.nextFollowUpAt).toISOString().split("T")[0] : ""}"`,
+      `"${l.assignedTo ? `${l.assignedTo.firstName} ${l.assignedTo.lastName}` : "Unassigned"}"`,
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `nuro7_leads_export_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ variant: "success", title: "Leads exported to CSV!" });
+  };
+
   return (
     <ListPageLayout module="clients" title="Lead Pipeline & CRM" description="Category-wise lead tracking, follow-up scheduling, and Meta Ads webhook integration."
       primaryAction={{ label: "New Lead", icon: <Plus className="mr-1 size-4" />, onClick: () => setCreateOpen(true) }}
@@ -435,6 +465,7 @@ export default function LeadsPage() {
         { label: "Staff Distribution", icon: <Users className="mr-1 size-4" />, onClick: openWorkloadModal },
         { label: "Meta Ads Integration", icon: <Share2 className="mr-1 size-4" />, onClick: () => setMetaGuideOpen(true) },
         { label: "Import CSV", icon: <Upload className="mr-1 size-4" />, onClick: () => setImportOpen(true) },
+        { label: "Export CSV", icon: <Download className="mr-1 size-4" />, onClick: exportToCsv },
       ]}
       counts={[
         { label: "new", value: leads.filter((l) => l.status === "NEW").length, tone: "info" },
