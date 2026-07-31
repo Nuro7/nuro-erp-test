@@ -132,19 +132,50 @@ export class LeadsService {
     try {
       lead = await this.prisma.lead.create({ data });
     } catch (err) {
-      this.logger.warn(`Lead create with extended fields failed: ${(err as Error).message}. Retrying with core fields.`);
-      // Strip un-migrated DB fields if necessary
-      const coreData = {
-        companyName: dto.companyName,
-        contactName: dto.contactName,
-        email: dto.email ?? "",
-        phone: dto.phone ?? null,
-        source: dto.source ?? null,
-        status: dto.status ?? "NEW",
-        estimatedValue: dto.estimatedValue != null ? dto.estimatedValue : undefined,
-        notes: dto.notes ?? null,
-      };
-      lead = await this.prisma.lead.create({ data: coreData });
+      this.logger.warn(`Lead create with extended fields failed: ${(err as Error).message}. Retrying with raw SQL insert.`);
+      try {
+        const id = `lead_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        const now = new Date();
+        const companyName = dto.companyName || "Untitled";
+        const contactName = dto.contactName || "Contact";
+        const email = dto.email ?? "";
+        const phone = dto.phone ?? "";
+        const source = dto.source ?? "Direct";
+        const status = dto.status ?? "NEW";
+        const notes = dto.notes ?? "";
+
+        await this.prisma.$executeRawUnsafe(
+          `INSERT INTO "Lead" (id, "companyName", "contactName", email, phone, source, status, notes, "createdAt", "updatedAt")
+           VALUES ($1, $2, $3, $4, $5, $6, $7::"LeadStatus", $8, $9, $10)`,
+          id,
+          companyName,
+          contactName,
+          email,
+          phone,
+          source,
+          status,
+          notes,
+          now,
+          now,
+        );
+
+        lead = {
+          id,
+          companyName,
+          contactName,
+          email,
+          phone,
+          source,
+          category: "General",
+          status,
+          notes,
+          createdAt: now,
+          updatedAt: now,
+        };
+      } catch (rawErr) {
+        this.logger.error(`Raw SQL insert fallback failed: ${(rawErr as Error).message}`);
+        throw rawErr;
+      }
     }
 
     try {
