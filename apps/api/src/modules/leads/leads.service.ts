@@ -35,7 +35,7 @@ export class LeadsService {
       const rolesArray = Array.isArray(userCtx.roles) ? userCtx.roles : [];
       const roleCodes = rolesArray.map((r: any) => (typeof r === "string" ? r : r?.role?.code));
       const isPrivileged = roleCodes.some((code: string) =>
-        ["SUPER_ADMIN", "ADMIN", "PROJECT_MANAGER", "HR_MANAGER"].includes(code),
+        ["SUPER_ADMIN", "ADMIN"].includes(code),
       );
 
       if (!isPrivileged) {

@@ -267,17 +267,48 @@ export function AddEmployeeDialog({ open, onOpenChange }: Props) {
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Department" required>
-              <Input
-                value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                error={showMissing(department)}
-              />
+              <div className="space-y-1.5">
+                <Input
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  error={showMissing(department)}
+                  placeholder="e.g. Sales, Engineering"
+                />
+                <div className="flex flex-wrap gap-1">
+                  {[
+                    "Sales & Business Development",
+                    "Engineering",
+                    "Design",
+                    "HR & Operations",
+                    "Finance",
+                  ].map((dept) => (
+                    <button
+                      key={dept}
+                      type="button"
+                      onClick={() => {
+                        setDepartment(dept);
+                        if (dept.includes("Sales")) {
+                          setDesignation("Sales Executive");
+                        }
+                      }}
+                      className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                        department === dept
+                          ? "bg-blue-600 text-white"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+                      }`}
+                    >
+                      {dept.includes("Sales") ? "🎯 " + dept + " (CRM Access)" : dept}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </Field>
             <Field label="Designation" required>
               <Input
                 value={designation}
                 onChange={(e) => setDesignation(e.target.value)}
                 error={showMissing(designation)}
+                placeholder="e.g. Sales Executive, Account Executive"
               />
             </Field>
           </div>
