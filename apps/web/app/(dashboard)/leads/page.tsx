@@ -719,7 +719,7 @@ export default function LeadsPage() {
               </div>
               <Button
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 onClick={() => {
                   const target = detailLead;
                   setDetailLead(undefined);
