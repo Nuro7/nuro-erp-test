@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { NotificationType } from "@prisma/client";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { PaginationDto, getPagination } from "../../common/pagination/pagination.dto";
@@ -19,6 +19,8 @@ interface UserContext {
 
 @Injectable()
 export class LeadsService {
+  private readonly logger = new Logger(LeadsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -79,24 +81,45 @@ export class LeadsService {
       }
     }
 
-    const [data, total] = await this.prisma.$transaction([
-      this.prisma.lead.findMany({
-        where,
-        include: {
-          assignedTo: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
-          convertedTo: { select: { id: true, companyName: true } },
-        },
-        skip,
-        take,
-        orderBy: [{ nextFollowUpAt: "asc" }, { createdAt: "desc" }],
-      }),
-      this.prisma.lead.count({ where }),
-    ]);
+    try {
+      const [data, total] = await this.prisma.$transaction([
+        this.prisma.lead.findMany({
+          where,
+          include: {
+            assignedTo: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
+            convertedTo: { select: { id: true, companyName: true } },
+          },
+          skip,
+          take,
+          orderBy: [{ nextFollowUpAt: "asc" }, { createdAt: "desc" }],
+        }),
+        this.prisma.lead.count({ where }),
+      ]);
 
-    return {
-      data,
-      meta: { page, pageSize, total, pageCount: Math.ceil(total / pageSize) },
-    };
+      return {
+        data,
+        meta: { page, pageSize, total, pageCount: Math.ceil(total / pageSize) },
+      };
+    } catch (err) {
+      this.logger.warn(`findAll query failed with filters: ${(err as Error).message}. Retrying with basic query.`);
+      const [data, total] = await this.prisma.$transaction([
+        this.prisma.lead.findMany({
+          skip,
+          take,
+          include: {
+            assignedTo: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
+            convertedTo: { select: { id: true, companyName: true } },
+          },
+          orderBy: { createdAt: "desc" },
+        }),
+        this.prisma.lead.count(),
+      ]);
+
+      return {
+        data,
+        meta: { page, pageSize, total, pageCount: Math.ceil(total / pageSize) },
+      };
+    }
   }
 
   async create(dto: CreateLeadDto) {
