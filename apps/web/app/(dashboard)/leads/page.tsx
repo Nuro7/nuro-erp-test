@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, UserPlus, Trash2, TrendingUp, Upload, Share2, Calendar, Tag, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
+import { Plus, UserPlus, Trash2, TrendingUp, Upload, Share2, Calendar, Tag, CheckCircle2, Clock, AlertTriangle, Pencil } from "lucide-react";
 import { ListPageLayout } from "@/components/layouts/list-page-layout";
 import { CsvImportDialog } from "@/components/shared/csv-import-dialog";
 import { LEAD_IMPORT_FIELDS } from "@/components/shared/csv-import-fields";
@@ -149,6 +149,38 @@ export default function LeadsPage() {
   const importMutation = useImportLeadsCsv();
   const convertToDealMutation = useConvertLeadToDeal();
 
+  const [editLead, setEditLead] = useState<LeadRow | null>(null);
+
+  const updateLeadMutation = useMutation({
+    mutationFn: ({ id, ...dto }: { id: string } & Record<string, any>) => apiPatch(`/leads/${id}`, dto),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["leads"] });
+      void qc.invalidateQueries({ queryKey: ["leads-categories"] });
+      void qc.invalidateQueries({ queryKey: ["leads-meta-campaigns"] });
+      toast({ variant: "success", title: "Lead updated successfully" });
+    },
+    onError: () => toast({ variant: "error", title: "Failed to update lead" }),
+  });
+
+  const openEditModal = (lead: LeadRow) => {
+    setEditLead(lead);
+    form.reset({
+      companyName: lead.companyName,
+      contactName: lead.contactName,
+      email: lead.email || "",
+      phone: lead.phone || "",
+      source: lead.source || "",
+      category: lead.category || "General",
+      status: lead.status || "NEW",
+      estimatedValue: lead.estimatedValue ? Number(lead.estimatedValue) : undefined,
+      notes: lead.notes || "",
+      nextFollowUpAt: lead.nextFollowUpAt ? new Date(lead.nextFollowUpAt) : undefined,
+      campaignName: lead.campaignName || "",
+      assignedToId: lead.assignedToId || "",
+    });
+    setCreateOpen(true);
+  };
+
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => apiPatch(`/leads/${id}`, { status }),
     onSuccess: () => { void qc.invalidateQueries({ queryKey: ["leads"] }); toast({ variant: "success", title: "Lead status updated" }); },
@@ -276,6 +308,7 @@ export default function LeadsPage() {
   })();
 
   const rowActions: RowAction<LeadRow>[] = [
+    { label: "Edit Lead Details", icon: <Pencil className="size-4" />, onClick: (row) => openEditModal(row) },
     { label: "Contacted", onClick: (row) => updateStatusMutation.mutate({ id: row.id, status: "CONTACTED" }) },
     { label: "Qualified", onClick: (row) => updateStatusMutation.mutate({ id: row.id, status: "QUALIFIED" }) },
     { label: "Won", onClick: (row) => updateStatusMutation.mutate({ id: row.id, status: "WON" }) },
@@ -326,7 +359,32 @@ export default function LeadsPage() {
       ...values,
       nextFollowUpAt: values.nextFollowUpAt ? values.nextFollowUpAt.toISOString() : undefined,
     };
-    createMutation.mutate(payload, { onSuccess: () => { setCreateOpen(false); form.reset(); } });
+    if (values.estimatedValue != null && !isNaN(values.estimatedValue)) {
+      payload.estimatedValue = Number(values.estimatedValue);
+    }
+
+    if (editLead) {
+      updateLeadMutation.mutate(
+        { id: editLead.id, ...payload },
+        {
+          onSuccess: () => {
+            setCreateOpen(false);
+            setEditLead(null);
+            form.reset();
+          },
+        },
+      );
+    } else {
+      createMutation.mutate(payload, {
+        onSuccess: () => {
+          setCreateOpen(false);
+          form.reset();
+          void qc.invalidateQueries({ queryKey: ["leads"] });
+          void qc.invalidateQueries({ queryKey: ["leads-categories"] });
+          void qc.invalidateQueries({ queryKey: ["leads-meta-campaigns"] });
+        },
+      });
+    }
   };
 
   const onSubmitDeal = (values: DealFormValues) => {
@@ -503,10 +561,10 @@ export default function LeadsPage() {
         emptyState={{ title: "No leads found", description: "Adjust your filters or add a new lead to populate your pipeline." }}
       />
 
-      {/* Create Lead Modal */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      {/* Create / Edit Lead Modal */}
+      <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) setEditLead(null); }}>
         <DialogContent size="lg">
-          <DialogHeader><DialogTitle>Create New Lead</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editLead ? "Edit Lead Details" : "Create New Lead"}</DialogTitle></DialogHeader>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <FormField label="Company Name" required error={form.formState.errors.companyName?.message}>
@@ -587,8 +645,12 @@ export default function LeadsPage() {
             </div>
             <FormField label="Notes"><TextArea {...form.register("notes")} placeholder="Additional lead context, requirements..." /></FormField>
             <DialogFooter>
-              <Button type="button" variant="secondary" onClick={() => setCreateOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={createMutation.isPending}>{createMutation.isPending ? "Creating..." : "Create Lead"}</Button>
+              <Button type="button" variant="secondary" onClick={() => { setCreateOpen(false); setEditLead(null); }}>Cancel</Button>
+              <Button type="submit" disabled={createMutation.isPending || updateLeadMutation.isPending}>
+                {editLead
+                  ? (updateLeadMutation.isPending ? "Saving..." : "Save Changes")
+                  : (createMutation.isPending ? "Creating..." : "Create Lead")}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -650,46 +712,112 @@ export default function LeadsPage() {
       >
         {detailLead && (
           <div className="space-y-5">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <div className="text-xs uppercase tracking-wider text-slate-400">Category</div>
-                <Badge tone="info" size="sm">{detailLead.category || "General"}</Badge>
+            {/* Quick Action Header Bar */}
+            <div className="flex items-center justify-between rounded-lg border bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Lead Controls
               </div>
-              <div>
-                <div className="text-xs uppercase tracking-wider text-slate-400">Status</div>
-                <Badge tone={leadStatusTone[detailLead.status] ?? "neutral"} dot size="sm">
-                  {detailLead.status.replace("_", " ")}
-                </Badge>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const target = detailLead;
+                  setDetailLead(undefined);
+                  openEditModal(target);
+                }}
+                className="h-8 gap-1.5 text-xs font-medium"
+              >
+                <Pencil className="size-3.5" /> Edit Lead Details
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="space-y-1">
+                <div className="text-xs uppercase tracking-wider text-slate-400 font-medium">Category</div>
+                <select
+                  value={detailLead.category || "General"}
+                  onChange={(e) => {
+                    const newCat = e.target.value;
+                    updateLeadMutation.mutate({ id: detailLead.id, category: newCat });
+                    setDetailLead({ ...detailLead, category: newCat });
+                  }}
+                  className="w-full rounded border border-slate-300 bg-background px-2.5 py-1.5 text-xs font-medium focus:outline-none dark:border-slate-700"
+                >
+                  {dynamicCategories.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
               </div>
+
+              <div className="space-y-1">
+                <div className="text-xs uppercase tracking-wider text-slate-400 font-medium">Status</div>
+                <select
+                  value={detailLead.status}
+                  onChange={(e) => {
+                    const newStatus = e.target.value;
+                    updateLeadMutation.mutate({ id: detailLead.id, status: newStatus });
+                    setDetailLead({ ...detailLead, status: newStatus });
+                  }}
+                  className="w-full rounded border border-slate-300 bg-background px-2.5 py-1.5 text-xs font-semibold focus:outline-none dark:border-slate-700"
+                >
+                  <option value="NEW">New</option>
+                  <option value="CONTACTED">Contacted</option>
+                  <option value="QUALIFIED">Qualified</option>
+                  <option value="PROPOSAL_SENT">Proposal Sent</option>
+                  <option value="NEGOTIATION">Negotiation</option>
+                  <option value="WON">Won</option>
+                  <option value="LOST">Lost</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-xs uppercase tracking-wider text-slate-400 font-medium">Next Follow-up</div>
+                <DatePicker
+                  value={detailLead.nextFollowUpAt ? new Date(detailLead.nextFollowUpAt) : undefined}
+                  onChange={(d) => {
+                    const iso = d ? d.toISOString() : undefined;
+                    updateLeadMutation.mutate({ id: detailLead.id, nextFollowUpAt: d });
+                    setDetailLead({ ...detailLead, nextFollowUpAt: iso });
+                  }}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-xs uppercase tracking-wider text-slate-400 font-medium">Assigned Sales Staff</div>
+                <select
+                  value={detailLead.assignedToId || ""}
+                  onChange={(e) => {
+                    const targetId = e.target.value;
+                    updateLeadMutation.mutate({ id: detailLead.id, assignedToId: targetId });
+                    const assigned = users.find((u) => u.id === targetId);
+                    setDetailLead({ ...detailLead, assignedToId: targetId, assignedTo: assigned });
+                  }}
+                  className="w-full rounded border border-slate-300 bg-background px-2.5 py-1.5 text-xs font-medium focus:outline-none dark:border-slate-700"
+                >
+                  <option value="">Unassigned</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
+                  ))}
+                </select>
+              </div>
+
               <div>
-                <div className="text-xs uppercase tracking-wider text-slate-400">Next Follow-up</div>
-                <div>
-                  <Badge tone={getFollowUpStatus(detailLead.nextFollowUpAt).tone} size="sm">
-                    {getFollowUpStatus(detailLead.nextFollowUpAt).label}
-                  </Badge>
+                <div className="text-xs uppercase tracking-wider text-slate-400 font-medium">Estimated Value</div>
+                <div className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+                  {detailLead.estimatedValue ? formatCurrency(Number(detailLead.estimatedValue)) : "—"}
                 </div>
               </div>
               <div>
-                <div className="text-xs uppercase tracking-wider text-slate-400">Estimated Value</div>
-                <div className="font-semibold text-slate-900 dark:text-slate-100">{detailLead.estimatedValue ? formatCurrency(Number(detailLead.estimatedValue)) : "—"}</div>
+                <div className="text-xs uppercase tracking-wider text-slate-400 font-medium">Email</div>
+                <div className="mt-1 text-xs text-slate-700 dark:text-slate-300">{detailLead.email || "—"}</div>
               </div>
               <div>
-                <div className="text-xs uppercase tracking-wider text-slate-400">Email</div>
-                <div>{detailLead.email || "—"}</div>
+                <div className="text-xs uppercase tracking-wider text-slate-400 font-medium">Phone</div>
+                <div className="mt-1 text-xs text-slate-700 dark:text-slate-300">{detailLead.phone ?? "—"}</div>
               </div>
               <div>
-                <div className="text-xs uppercase tracking-wider text-slate-400">Phone</div>
-                <div>{detailLead.phone ?? "—"}</div>
-              </div>
-              <div>
-                <div className="text-xs uppercase tracking-wider text-slate-400">Source / Campaign</div>
-                <div>{detailLead.campaignName || detailLead.source || "—"}</div>
-              </div>
-              <div>
-                <div className="text-xs uppercase tracking-wider text-slate-400">Assigned To</div>
-                <div>
-                  {detailLead.assignedTo ? `${detailLead.assignedTo.firstName} ${detailLead.assignedTo.lastName}` : "Unassigned"}
-                </div>
+                <div className="text-xs uppercase tracking-wider text-slate-400 font-medium">Source / Campaign</div>
+                <div className="mt-1 text-xs text-slate-700 dark:text-slate-300">{detailLead.campaignName || detailLead.source || "—"}</div>
               </div>
             </div>
 
