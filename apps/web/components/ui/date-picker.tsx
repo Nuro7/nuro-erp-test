@@ -21,18 +21,15 @@ export function DatePicker({ value, onChange, placeholder = "Pick a date", minDa
   const [open, setOpen] = React.useState(false);
   const [month, setMonth] = React.useState<Date>(() => value ?? new Date());
 
-  React.useEffect(() => {
-    if (value) {
-      setMonth(value);
-      return;
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (isOpen) {
+      setMonth(value ?? new Date());
     }
-    if (open) {
-      setMonth(new Date());
-    }
-  }, [value, open]);
+  };
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
+    <Popover.Root open={open} onOpenChange={handleOpenChange}>
       <Popover.Trigger
         disabled={disabled}
         className={cn(
